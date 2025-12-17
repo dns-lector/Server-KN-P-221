@@ -1,0 +1,47 @@
+CGI - Common Gateway Interface - Інтерфейс спільного шлюзу
+Ідея створення єдиного інтерфейсу для можливості підключення 
+до веб-серверів довільних виконавців коду. Веб-сервер у 
+такоми режимі є транзитним вузлом для прийому та аналізу 
+НТТР-запиту та передачі управління наступному виконавцю
+
+---Browser(Client)---      -----------------Server-------------------
+                           ---Web-server---       ---CGI-scripts---
+GET /index HTTP/1.1  ------> { method:GET,     
+                               scheme:https,    CGI
+                               path:"/index" } -----> index.py     
+                                                      .....
+  <h1>Hello</h1>    <--------  server:Apache <------- print(<h1>Hello</h1>)                      
+
+Налаштування сервера (на прикладі Apache)
+- встановлюємо сервер (приклад на збірці XAMPP)
+- організуємо віртуальний хостінг (управління кількома сайтами одним сервером)
+ = знаходимо файл конфігурації (Control Panel - Apache - Config - Browse Apache)
+   Директорія conf/extra, файл httpd-vhosts.conf --- відкрити в редакторі тексту
+ = додаємо запис:
+################# KN-P-221 ###########################
+<VirtualHost *:80>                                                                          | Початок декларації - новий хост
+    ServerAdmin webmaster@localhost                                                         | Дані для сторінки помилок
+    DocumentRoot "C:/Users/Lector/source/repos/Server-KN-P-221/cgi"                         | Розміщення хосту - основна директорія
+    ServerName cgi221.loc                                                                   | Хост-ім'я
+    ServerAlias www.cgi221.loc                                                              | Хост-псевдонім
+    ErrorLog "C:/Users/Lector/source/repos/Server-KN-P-221/cgi/logs/error.log"              | Файл логування помилок 
+    CustomLog "C:/Users/Lector/source/repos/Server-KN-P-221/cgi/logs/access.log" common     | Файл логування звернень
+	<Directory "C:/Users/Lector/source/repos/Server-KN-P-221/cgi">                          | Окремі налаштування директорії
+		AllowOverride All                                                                   | 
+		Options -Indexes +ExecCGI                                                           | Дозволяємо виконання CGI
+		AddHandler cgi-script  .py                                                          | Задаємо розширення ".py" як CGI
+		Require all granted                                                                 | Без обмеження доступу
+		DirectoryIndex index.py index.html                                                  | Порядок пошуку стартових файлів       
+	</Directory>                                                                            | 
+</VirtualHost>        
+ = створюємо директорію /logs у директорії сайту
+ = (пере)запускаємо Apache, ознакою успіху буде поява файлів error.log, access.log у /logs 
+ = конфігуруємо локальний DNS (/etc/hosts | C:\Windows\System32\drivers\etc\hosts) - 
+    відкриваємо у текстовому редакторі, додаємо записи про новий сайт:
+    127.0.0.1       cgi221.loc
+	::1             cgi221.loc
+	127.0.0.1       www.cgi221.loc
+	::1             www.cgi221.loc
+ = додаємо до директорії хосту (/cgi/) файл index.html з тестовим контентом   
+ = перевіряємо: у браузері набираємо http://cgi221.loc (з http://, інакше перейде у пошук), 
+    переконуємось у появі контенту з index.html
