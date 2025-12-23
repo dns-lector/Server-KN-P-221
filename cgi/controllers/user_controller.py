@@ -1,133 +1,86 @@
-from models.request import CgiRequest
-import datetime, io, json, sys
+from controllers.controller_rest import RestController, RestMeta, RestStatus, RestCache
+import base64, binascii, re, datetime, helper
+from dao.data_accessor import DataAccessor
 
-class RestStatus :
-    def __init__(self, is_ok:bool, code:int, message:str) :
-        self.is_ok = is_ok
-        self.code = code
-        self.message = message
-
-    def to_json(self) :
-        return {
-            "isOk": self.is_ok,
-            "code": self.code,
-            "message": self.message,
-        }
-
-RestStatus.status200 = RestStatus(True,  200, "OK")        
-RestStatus.status405 = RestStatus(False, 405, "Method Not Allowed")
-
-
-
-class RestCache :
-    def __init__(self, exp:str|int|None=None, lifetime:int|None=None):
-        self.exp = exp
-        self.lifetime = lifetime
-        
-    def to_json(self) :
-        return {
-            "exp": self.exp,
-            "lifetime": self.lifetime,
-            "units": "seconds",
-        }
-
-RestCache.no = RestCache()
-RestCache.hrs1 = RestCache(lifetime=60*60)
-
-
-
-class RestMeta :
-    def __init__(self, service:str, requestMethod:str,  dataType:str="null",
-                 cache:RestCache=RestCache.no, authUserId:str|int|None=None,
-                 serverTime:int|None=None, params:dict|None=None, links:dict|None=None):
-        self.service = service
-        self.requestMethod = requestMethod
-        self.authUserId = authUserId
-        self.dataType = dataType
-        self.cache = cache
-        self.serverTime = serverTime if serverTime != None else datetime.datetime.now().timestamp()
-        self.params = params
-        self.links = links
-        
-    def to_json(self) :
-        return {
-            "service": self.service,
-            "requestMethod": self.requestMethod,
-            "dataType": self.dataType,
-            "cache": self.cache.to_json(),
-            "serverTime": self.serverTime,
-            "params": self.params,
-            "links": self.links,
-            "authUserId": self.authUserId,
-        }
-
-
-
-class RestResponse :
-    def __init__(self, 
-                 meta:RestMeta,
-                 status:RestStatus=RestStatus.status200,
-                 data:any=None):
-        self.status = status
-        self.meta = meta
-        self.data = data
-        
-    def to_json(self) :
-        return {
-            "status": self.status,
-            "meta": self.meta,
-            "data": self.data,
-        }
-
-
-
-class UserController :
-
-    def __init__(self, request:CgiRequest):
-        self.request = request
-
+class UserController(RestController) :
 
     def serve(self) :
         # формуємо REST відповідь
-        self.response = RestResponse(
-            meta=RestMeta(
-                service="User API",
-                requestMethod=self.request.request_method,
-                links={
-                    "get": "GET /user",
-                    "post": "POST /user",
-                }
-            )
+        self.response.meta=RestMeta(
+            service="User API",
+            links={
+                "get": "GET /user",
+                "post": "POST /user",
+            }
         )
-        # шукаємо в об'єкті метод action та виконуємо його
-        action = "do_" + self.request.request_method.lower() 
-        controller_action = getattr(self, action, None)
-
-        if controller_action :
-            controller_action()
-        else :
-            self.response.status = RestStatus.status405
-
-        sys.stdout.buffer.write(b"Content-Type: application/json; charset=utf-8\n\n")
-        sys.stdout.buffer.write(
-            json.dumps(
-                self.response, 
-                ensure_ascii=False,
-                default=lambda x: x.to_json() if hasattr(x, 'to_json') else str
-            ).encode())    
-
+        super().serve()
+        
 
     def do_get(self) :
         self.response.meta.service += ": authentication"
+        # Перевірити чи є заголовок 'Authorization' у запиті
+        auth_header = self.request.headers.get('Authorization', None)
+        if not auth_header :
+            self.send_401("Missing required header 'Authorization'")
+            return
+        
+        # Перевірити чи заголовок 'Authorization' має схему 'Basic'
+        auth_scheme = 'Basic '
+        if not auth_header.startswith(auth_scheme) :
+            self.send_401(f"Invalid Authorization scheme: {auth_scheme} only")
+            return
+        
+        credentials = auth_header[len(auth_scheme):]
+        # Перевірити мінімальну валідність даних: base64 при логіні в 2 символи 
+        #  і паролі в 1 символ буде мати довжину 7 символів
+        if len(credentials) < 7 :
+            self.send_401(f"{auth_scheme} credentials too short")
+            return
+        
+        # Оскільки Python ігнорує символи, що не є base64, то їх наявність
+        # ми контролюємо окремо, регулярними виразами
+        match = re.search(r"[^a-zA-Z0-9+/=]", credentials)
+        if match:
+            self.send_401(f"Format error (invalid symbol) for credential: {credentials}")
+            return
+
+        user_pass = None
+        try :
+            user_pass = base64.standard_b64decode(credentials).decode(encoding="utf-8")
+        except binascii.Error :
+            self.send_401(f"Padding error for credential: {credentials}")
+            return
+        except Exception as err :
+            self.send_401(f"Decode error '{err}' for credential: {credentials}")
+            return
+
+        if not user_pass :
+            self.send_401(f"Decode error for credential: {credentials}")
+            return
+        
+        if not ':' in user_pass :
+            self.send_401(f"User-pass format error (missing ':') {user_pass}")
+            return
+
+        login, password = user_pass.split(':', 1)
+        data_accessor = DataAccessor()
+        user = data_accessor.authenticate(login, password)
+
+        if not user :
+            self.send_401(f"Credentials rejected")
+            return
+        
         self.response.meta.cache = RestCache.hrs1
-        self.response.meta.dataType = "object"
-        self.response.data = {
-            "int": 10,
-            "float": 1e-3,
-            "str": "GET",
-            "cyr": "Вітання",
-            "headers": self.request.headers
+        self.response.meta.dataType = "token"
+        payload = {
+            "sub": str(user['user_id']),
+            "iss": "Server-KN-P-221",
+            "aud": user['role_id'],
+            "iat": datetime.datetime.now().timestamp(),
+            "name": user['user_name'],
+            "email": user['user_email'],
         }
+        self.response.data = helper.compose_jwt( payload )
 
 
     def do_post(self) :
@@ -142,7 +95,12 @@ class UserController :
         }
 
 '''
-Д.З. Реалізувати відповіді API /order (попереднє ДЗ) у формалізмі REST
+Д.З. Реалізувати тести (кнопки на сторінці /usertest) для помилкових даних автентифікації
+- відсутній заголовок авторизації
+- неправильна схема
+- закороткі дані
+- неправильні символи base64
+* інші ситуації
 Додати скріншоти результатів роботи
 '''
 
