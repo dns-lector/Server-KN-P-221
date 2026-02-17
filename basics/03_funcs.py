@@ -53,6 +53,14 @@ def show(x:int) -> None :
     else :
         print()
 
+def fact(n:int) -> int :
+    return 1 if n < 2 else n * fact(n-1)
+'''                      | ? ф-ція - це іменована підпрограма ?
+fact(3) :                | ? параметр - аналог змінної, до якої копіюється аргумент ?
+  n * fact(2) :          | n -> 3, fact(2) -- n -> 2, fact(1) -- n -> 1      
+     n * fact(1) : 1     | n * fact(1) -- чому дорівнює n?            
+'''
+
 
 def main() :
     show(10)

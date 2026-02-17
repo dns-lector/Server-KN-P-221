@@ -19,8 +19,48 @@
             <td><button id="api-discount-get-btn">GET discount</button></td>
             <td id="api-discount-get-result"></td>
         </tr>
+        <tr>
+            <td><button data-path="/program" data-id="api-discount-get-btn">GET discount program</button></td>
+            <td data-id="api-discount-get-result"></td>
+        </tr>
+    </tbody>
+</table>
+<p id="token"></p>
+<p id="token-payload"></p>
+<hr/>
+<h2>Самотестування авторизації</h2>
+<button id="run-all-tests">Запустити всі тести</button>
+<table>
+    <thead>
+        <tr>
+            <th>Тест</th>
+            <th>Результат</th>
+            <th>Деталі</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr data-test>
+            <td>
+                <i>Basic scheme</i>
+                <button data-token="Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==" 
+                    >Пуск</button>
+            </td>
+            <td data-result></td>
+            <td data-details 
+                data-isok="false" 
+                data-code="401" 
+                data-message="UnAuthorized" 
+                data-data="Invalid Authorization scheme: Bearer only"></td>
+        </tr>
+        <tr data-test>
+            <td>
+                <i>padding error</i>
+                <button data-token="Bearer QWxhZGRpbjpvcGVuIHNlc2FtZQ=.eyJzdWIiOiA" 
+                    >Пуск</button>
+            </td>
+            <td data-result></td>
+            <td data-details data-code="401" data-isok="false" data-message="UnAuthorized" data-data="Invalid token header (padding error)"></td>
+        </tr>
     </tbody>
 </table>
 
-<p id="token"></p>
-<p id="token-payload"></p>

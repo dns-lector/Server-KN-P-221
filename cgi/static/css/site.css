@@ -1,3 +1,13 @@
 body {
     background-color: antiquewhite;
 }
+.test-ok {
+    background-color: green;
+    color: lime;
+    padding: 0 5px;
+}
+.test-fail {
+    background-color: maroon;
+    color: #f86368;
+    padding: 0 5px;
+}
