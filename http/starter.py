@@ -196,3 +196,46 @@ GET  /user/profile - інший обробник          GET  /user/profile - �
 - посилання з розділами (/user/auth, /user/auth/secret),
 - посилання з URL-кодованими значеннями (/user/%D0%A3%D0%BD%D1%96%D1%84%D1%96%D0%BA%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B9&%D0%BB%D0%BE%D0%BA%D0%B0%D1%82%D0%BE%D1%80=%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81%D1%96%D0%B2&2+2=4)
 '''
+
+'''
+REST - обмеження на структуру даних, які можна сприймати як доповнення даних метаданими
+{
+    meta: {
+        uri: "https://my-site.loc/item?year=2026&month=2&day=10&shadeColor=gray&size=150&texturize=true",
+        cache: 100500,
+        receivedVariables: {                     !! розпізнані бекендом величини
+            "year": "2026",                      !! не копії з запиту, а саме значення,
+            "month": "2",                        !! на які орієнтується сервер
+            "day": "10",
+            "shadeColor": "gray",
+            "size": "150",
+            "texturize": "true"
+        },
+        manipulations: {
+            read: "GET /item",
+            delete: "DELETE /item",
+            ...
+        },
+        links: {
+            "sub-item": "/item/{id}",
+            "search": "/item/search?q={fragment}",
+            ...
+        },
+        dataType: "object",
+        dataModel: {
+            {
+                fieldName: "title",
+                fieldType: "string",
+                filedMaxSize: 256,
+                fieldDescription: "Name of item by producer"
+            },
+            ...
+        }
+    },
+    data: ...
+}
+
+Д.З. Скласти метадані для даних типу "масив",
+передбачити пагінацію
+Дотримуватись принципів REST
+'''
