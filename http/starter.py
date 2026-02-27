@@ -2,9 +2,9 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import socket
 import urllib.parse
 
-# plus_encoded_string = 'My+name+is+John'
-# decoded_with_unquote = urllib.parse.unquote(plus_encoded_string)
-# decoded_with_unquote_plus = urllib.parse.unquote_plus(plus_encoded_string)
+DEV_MODE = True
+
+
 def url_decode(input:str|None) -> str|None :
     return None if input is None else urllib.parse.unquote_plus(input)
 
@@ -69,6 +69,8 @@ class RequestHandler(AccessManagerRequestHandler) :
         
     def access_manager(self):
         parts = self.path.split('?', 1)
+        if self.check_static_asset(parts[0]) :   # якщо запит = посилання на файл, зупиняємо обробку
+            return
         # розібрати параметри маршруту API: METHOD /service/section?
         self.api["method"] = self.command
         splitted_path = [url_decode(p) for p in parts[0].strip("/").split("/", 1)]
@@ -84,42 +86,71 @@ class RequestHandler(AccessManagerRequestHandler) :
                     value
                 ]
                 
-        return super().access_manager()
+        # маршрутизація контролерів
+        module_name = self.api["service"].lower() + '_controller'     # назва файлу контролера без розширення (home_controller)
+        class_name  = self.api["service"].capitalize() + 'Controller' # назва класу (HomeController)
+
+        import sys
+        sys.path.append("./")   # додаємо поточну директорію як таку, в якій шукаються модулі динамічного імпорту
+        import importlib        # підключаємо інструменти для динамічного імпорту
+
+        try :
+            # шукаємо (підключаємо) модуль з іменем module_name
+            controller_module = importlib.import_module(f"controllers.{module_name}")
+        except Exception as ex:
+            self.send_error(404, f"Controller module not found: {module_name} {ex if DEV_MODE else ''}")
+            return
+        # у ньому знаходимо клас class_name, створюємо з нього об'єкт
+        controller_class = getattr(controller_module, class_name, None)
+        if controller_class is None :
+            self.send_error(404, f"Controller class not found: {controller_class}")
+            return
+
+        controller_object = controller_class(self)   # усі дані про запит - у даному об'єкті (self)
+
+        # шукаємо в об'єкті метод-обробник
+        mname = 'do_' + self.command
+        if not hasattr(controller_object, mname):
+            self.send_error(405, "Unsupported method (%r) in '%r'" % (self.command, class_name))
+            return
+        method = getattr(controller_object, mname)
+        # ... та виконуємо його - передаємо управління контролеру
+        try :
+            method()
+        except Exception as ex:
+            message = "Request processing error "
+            if DEV_MODE : message += str(ex)
+            self.send_error(500, message)
+
+
+    def check_static_asset(self, input:str) -> bool :
+        '''Перевіряє чи є запит посиланням на існуючий файл'''
+        if self.command != "GET" :
+            print("not GET")
+            return False
+        if ( input.endswith('/')     # кінцевий / - ознака директорії
+              or '../' in input ) :  # ../ - символи обходу директорій
+            print("Conditions")
+            return False
+        path = './http/static' + input
+        print(path)
+        try :
+            with open(path, "rb") as file :
+                self.send_response(200, "OK")
+                self.send_header("Content-Type", "image/png")
+                self.end_headers()
+                self.wfile.write(file.read())
+            return True
+        except Exception as err :
+            print(err)
+            return False
     
-
-    def do_GET(self) :        # https://uk.wikipedia.org/wiki/%D0%A3%D0%BD%D1%96%D1%84%D1%96%D0%BA%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B9_%D0%BB%D0%BE%D0%BA%D0%B0%D1%82%D0%BE%D1%80_%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81%D1%96%D0%B2
-        print(self.path)      # /user/auth?hash=1a2d==&p=50/50&q=who?&x=10&y=20&x=30&json -- повний шлях + параметри
-        print(self.command)   # GET
-        # print(self.request)  -- socket
-        # Маршрутизація за різними підходами
-        # MVC: /controller/action/id?
-        # API: METHOD /service/section?
-        
-        self.send_response(200, "OK")
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(f"""<h1>HTTP</h1>
-        self.path = {self.path}<br/> 
-        api = {self.api}<br/>   
-        query_params = {self.query_params}<br/>   
-        <hr/>
-        <button onclick="linkClick()">LINK</button>
-        <p id=out></p>
-        <script>
-            function linkClick() {{
-                fetch("/", {{
-                    method: "LINK"
-                }}).then(r => r.text()).then(t => out.innerText = t);
-            }}
-        </script>
-        """.encode())
-
-
-    def do_LINK(self) :
-        self.send_response(200, "OK")
-        self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.end_headers()
-        self.wfile.write("LINK method response".encode())
+'''
+Д.З. Реалізувати визначення Content-Type для файлів, що передаються
+як статичні асети. Забезпечити "білий перелік" - якщо розширення
+файлу не належить до дозволених, то такий файл не надсилати (400 або 415)
+'''
+    
 
 
 
@@ -139,103 +170,23 @@ if __name__ == '__main__' :
     main()
 
 
-'''
-Модуль НТТР
-Альтернативний до CGI підхід у створенні серверних застосунків
-полягає у створенні власного (програмного)
-сервера, що є частиною загального проєкту.
-+ використовуємо єдину мову програмування (непотрібна конфігурація
-   стороннього сервера окремою мовою)
-+ уніфікуються ліцензійні умови
-- дотримання стандартів і протоколів перекладається на проєкт
-- частіше за все, програмні сервери більш повільні і не сертифіковані
-- необхідність перезапуску сервера після внесення змін до скриптів
 
-У Python такі засоби надає пакет http.server:
-HTTPServer - клас управління сервером (слухання порту, прийом запитів), 
-BaseHTTPRequestHandler - продовження оброблення, формування відповіді
+# if query_string != None :
+#     for item in query_string.split('&') :
+#         if len(item) == 0 : continue
+#         key, value = item.split('=', 1) if '=' in item else [item, None]
+#         query_params[key] = value if not key in query_params  else  [
+#             *(query_params[key] if isinstance(query_params[key], (list, tuple)) else [query_params[key]]), 
+#             value
+#         ]
 
-У результаті досліджень з'ясовуємо
-- на кожен запит утворюється новий об'єкт класу RequestHandler
-- print виводить на консоль запуску, а не до відповіді сервера
-- path відповідає за повний шлях запиту + параметри (query string)
-- command відповідає за методи запиту
-- маршрутизація не здійснюється
-
-MVC                                            API
-GET  /user/auth    | один                    GET  /user/auth    | різні 
-POST /user/auth    | обробник                POST /user/auth    | обробники     
-GET  /user/profile - інший обробник          GET  /user/profile - той самий, що й для GET  /user/auth       
-'''
-
-        # if query_string != None :
-        #     for item in query_string.split('&') :
-        #         if len(item) == 0 : continue
-        #         key, value = item.split('=', 1) if '=' in item else [item, None]
-        #         query_params[key] = value if not key in query_params  else  [
-        #             *(query_params[key] if isinstance(query_params[key], (list, tuple)) else [query_params[key]]), 
-        #             value
-        #         ]
-
-        # if query_string != None :
-        #     for item in query_string.split('&') :
-        #         if len(item) == 0 : continue
-        #         parts = item.split('=', 1)
-        #         key = parts[0]
-        #         value = parts[1] if len(parts) > 1 else None
-        #         query_params[key] = value if not key in query_params  else  [
-        #             *(query_params[key] if isinstance(query_params[key], (list, tuple)) else [query_params[key]]), 
-        #             value
-        #         ]            
-
-'''
-Д.З. Додати на сайт (стартову сторінку) декілька посилань на цю ж адресу для 
-випробування алгоритму розділення маршрутів:
-- посилання без параметрів (/)
-- посилання з сервісом (/user/, /user)
-- посилання з розділами (/user/auth, /user/auth/secret),
-- посилання з URL-кодованими значеннями (/user/%D0%A3%D0%BD%D1%96%D1%84%D1%96%D0%BA%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B9&%D0%BB%D0%BE%D0%BA%D0%B0%D1%82%D0%BE%D1%80=%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81%D1%96%D0%B2&2+2=4)
-'''
-
-'''
-REST - обмеження на структуру даних, які можна сприймати як доповнення даних метаданими
-{
-    meta: {
-        uri: "https://my-site.loc/item?year=2026&month=2&day=10&shadeColor=gray&size=150&texturize=true",
-        cache: 100500,
-        receivedVariables: {                     !! розпізнані бекендом величини
-            "year": "2026",                      !! не копії з запиту, а саме значення,
-            "month": "2",                        !! на які орієнтується сервер
-            "day": "10",
-            "shadeColor": "gray",
-            "size": "150",
-            "texturize": "true"
-        },
-        manipulations: {
-            read: "GET /item",
-            delete: "DELETE /item",
-            ...
-        },
-        links: {
-            "sub-item": "/item/{id}",
-            "search": "/item/search?q={fragment}",
-            ...
-        },
-        dataType: "object",
-        dataModel: {
-            {
-                fieldName: "title",
-                fieldType: "string",
-                filedMaxSize: 256,
-                fieldDescription: "Name of item by producer"
-            },
-            ...
-        }
-    },
-    data: ...
-}
-
-Д.З. Скласти метадані для даних типу "масив",
-передбачити пагінацію
-Дотримуватись принципів REST
-'''
+# if query_string != None :
+#     for item in query_string.split('&') :
+#         if len(item) == 0 : continue
+#         parts = item.split('=', 1)
+#         key = parts[0]
+#         value = parts[1] if len(parts) > 1 else None
+#         query_params[key] = value if not key in query_params  else  [
+#             *(query_params[key] if isinstance(query_params[key], (list, tuple)) else [query_params[key]]), 
+#             value
+#         ]            
