@@ -109,9 +109,9 @@ class RequestHandler(AccessManagerRequestHandler) :
         controller_object = controller_class(self)   # усі дані про запит - у даному об'єкті (self)
 
         # шукаємо в об'єкті метод-обробник
-        mname = 'do_' + self.command
+        mname = 'serve'
         if not hasattr(controller_object, mname):
-            self.send_error(405, "Unsupported method (%r) in '%r'" % (self.command, class_name))
+            self.send_error(500, "Non-standart controller" + (f" method 'serve' not found if '{class_name}'" if DEV_MODE else "") )
             return
         method = getattr(controller_object, mname)
         # ... та виконуємо його - передаємо управління контролеру

@@ -11,6 +11,7 @@ class HomeController :
         self.handler.end_headers()
         self.handler.wfile.write(f"""<h1>HTTP</h1>
         <img src="/img/Python.png" alt="logo" width=150 />
+        {self.handler.query_params}
         <hr/>
         <button onclick="linkClick()">LINK</button>
         <p id=out></p>
