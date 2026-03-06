@@ -11,8 +11,13 @@ class RestStatus:
             "code": self.code,
             "phrase": self.phrase,
         }
-
-
+RestStatus.no_found_404 = RestStatus(False, 404, "Not Found")
+RestStatus.service_unavailable_503  = RestStatus(False, 503, "Service Unavailable")
+'''
+Д.З. Реалізувати статичні поля RestStatus для стандартних
+HTTP-кодів. У starter.py підібрати правильні статуси для 
+помилкових ситуацій
+'''
 
 class RestResponse :
     def __init__(self, status:RestStatus|None=None, data:any=None):

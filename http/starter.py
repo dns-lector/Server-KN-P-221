@@ -1,6 +1,6 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import socket
-import urllib.parse
+import socket, urllib.parse, json
+from controllers.rest_response import RestResponse, RestStatus
 
 DEV_MODE = True
 
@@ -98,29 +98,64 @@ class RequestHandler(AccessManagerRequestHandler) :
             # шукаємо (підключаємо) модуль з іменем module_name
             controller_module = importlib.import_module(f"controllers.{module_name}")
         except Exception as ex:
-            self.send_error(404, f"Controller module not found: {module_name} {ex if DEV_MODE else ''}")
+            self.send_rest_response( RestResponse(
+                status=RestStatus.no_found_404,
+                data="Controller module not found for service '%s' %s" % (
+                    self.api["service"], module_name if DEV_MODE else ''
+            ) ) )
             return
         # у ньому знаходимо клас class_name, створюємо з нього об'єкт
         controller_class = getattr(controller_module, class_name, None)
         if controller_class is None :
-            self.send_error(404, f"Controller class not found: {controller_class}")
+            self.send_rest_response( RestResponse(
+                status=RestStatus.service_unavailable_503,
+                data="Controller class not found for service '%s' %s" % (
+                    self.api["service"], class_name if DEV_MODE else ''
+            ) ) )
             return
-
-        controller_object = controller_class(self)   # усі дані про запит - у даному об'єкті (self)
-
+        # Намагаємось створити об'єкт, try контролює правильність конструктора
+        try :
+            controller_object = controller_class(self)   # усі дані про запит - у даному об'єкті (self)
+        except :
+            self.send_rest_response( RestResponse(
+                status=RestStatus.service_unavailable_503,
+                data="Controller constructor not found for service '%s' %s" % (
+                    self.api["service"], class_name if DEV_MODE else ''
+            ) ) )
+            return
+        
         # шукаємо в об'єкті метод-обробник
         mname = 'serve'
         if not hasattr(controller_object, mname):
-            self.send_error(500, "Non-standart controller" + (f" method 'serve' not found if '{class_name}'" if DEV_MODE else "") )
+            self.send_rest_response( RestResponse(
+                status=RestStatus.service_unavailable_503,
+                data="Non-standart controller for service '%s' %s" % (
+                    self.api["service"], f" method 'serve' not found in '{class_name}'" if DEV_MODE else ""
+            ) ) )
             return
         method = getattr(controller_object, mname)
         # ... та виконуємо його - передаємо управління контролеру
         try :
             method()
         except Exception as ex:
-            message = "Request processing error "
-            if DEV_MODE : message += str(ex)
-            self.send_error(500, message)
+            self.send_rest_response( RestResponse(
+                status=RestStatus.service_unavailable_503,
+                data="Request processing error for service '%s' %s" % (
+                    self.api["service"], str(ex) if DEV_MODE else ""
+            ) ) )
+
+
+    def send_rest_response(self, rest_response):
+        self.send_response(200, "OK")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(
+            json.dumps(
+                rest_response, 
+                ensure_ascii=False,
+                default=lambda x: x.__json__() if hasattr(x, '__json__') else str
+            ).encode()
+        )
 
 
     def check_static_asset(self, input:str) -> bool :

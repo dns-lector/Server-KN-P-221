@@ -1,22 +1,19 @@
 from http.server import BaseHTTPRequestHandler
-import json
 from controllers.rest_response import RestResponse, RestStatus
+from controllers.rest_error import RestError
 
 
 class ControllerRest :   # з метою уникнення адреси /rest змінюємо правило іменування
     def __init__(self, handler:BaseHTTPRequestHandler):
-        self.handler = handler
-        self.rest_response = RestResponse()
+        self.handler = handler        
 
 
     def before_execution(self):
-        pass
-
-    def after_execution(self):
-        pass
+        self.rest_response = RestResponse()
 
 
     def serve(self):   # Основний метод запуску контролера, який забезпечить життєвий цикл запиту
+        self.before_execution()
         mname = 'do_' + self.handler.command
         if not hasattr(self, mname):
             self.rest_response.status = RestStatus(
@@ -27,9 +24,15 @@ class ControllerRest :   # з метою уникнення адреси /rest �
         else :
             method = getattr(self, mname)
             try :
-                self.before_execution()
                 method()
-                self.after_execution()
+                self.send_success()
+                return
+            except RestError as err:
+                self.rest_response.status = RestStatus(
+                    is_ok = False,
+                    code = err.code,
+                    phrase = err.phrase)
+                self.rest_response.data = err.data
             except Exception as ex:
                 # print(str(ex))
                 self.rest_response.status = RestStatus(
@@ -37,19 +40,15 @@ class ControllerRest :   # з метою уникнення адреси /rest �
                     code = 500,
                     phrase = "Request processing error " + str(ex)
                 )
-        self.send_rest_response()
+        self.send_error()
 
 
-    def send_rest_response(self):
-        self.handler.send_response(200, "OK")
-        self.handler.send_header("Content-Type", "application/json; charset=utf-8")
-        self.handler.end_headers()
-        self.handler.wfile.write(
-            json.dumps(
-                self.rest_response, 
-                ensure_ascii=False,
-                default=lambda x: x.__json__() if hasattr(x, '__json__') else str
-            ).encode()
-        )     
+    def send_success(self):
+        self.handler.send_rest_response(self.rest_response)
+
+        
+    def send_error(self):
+        self.handler.send_rest_response(self.rest_response)
+
 
 

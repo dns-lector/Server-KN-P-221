@@ -1,32 +1,49 @@
 from http.server import BaseHTTPRequestHandler
+from controllers.controller_rest import ControllerRest
 
 
-class HomeController :
-    def __init__(self, handler:BaseHTTPRequestHandler):
-        self.handler = handler
+class HomeController(ControllerRest) :
 
     def do_GET(self) :        
-        self.handler.send_response(200, "OK")
-        self.handler.send_header("Content-Type", "text/html; charset=utf-8")
-        self.handler.end_headers()
-        self.handler.wfile.write(f"""<h1>HTTP</h1>
+        self.html = f"""<h1>HTTP</h1>
         <img src="/img/Python.png" alt="logo" width=150 />
         {self.handler.query_params}
         <hr/>
-        <button onclick="linkClick()">LINK</button>
+        <button onclick="onClick('LINK')">LINK</button>
+        <button onclick="onClick('POST')">POST</button>
+        <button onclick="onClick('GET', 'user')">GET user</button>
+        <button onclick="onClick('POST', 'user')">POST user</button>
+
+        <button onclick="onClick('GET', 'no')">GET no module</button>
+        <button onclick="onClick('GET', 'noclass')">GET no controller</button>
+        <button onclick="onClick('GET', 'noinit')">GET no constructor</button>
+        <button onclick="onClick('GET', 'noserve')">GET no serve method</button>
+        <button onclick="onClick('GET', 'exserve')">GET exc in serve</button>
         <p id=out></p>
         <script>
-            function linkClick() {{
-                fetch("/", {{
-                    method: "LINK"
+            function onClick(method, service='') {{
+                fetch(`/${{service}}`, {{
+                    method: method
                 }}).then(r => r.text()).then(t => out.innerText = t);
             }}
         </script>
-        """.encode())
+        """
+        self.content_type = "text/html; charset=utf-8"
 
 
     def do_LINK(self) :
+        self.html = "LINK method response"
+        self.content_type = "text/plain; charset=utf-8"
+
+
+    def send_success(self):
         self.handler.send_response(200, "OK")
-        self.handler.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.handler.send_header("Content-Type", self.content_type)
         self.handler.end_headers()
-        self.handler.wfile.write("LINK method response".encode())    
+        self.handler.wfile.write(self.html.encode())
+
+'''
+ТЗ: HomeController має спадкуватись від REST
+у випадку помилки має повертатись JSON відповідь
+у випадку успіху - тип, визначений контролером (text/plain чи text/html)
+'''
