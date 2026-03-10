@@ -58,7 +58,7 @@ class AccessManagerRequestHandler(BaseHTTPRequestHandler) :
 
 class RequestHandler(AccessManagerRequestHandler) :
     def __init__(self, request, client_address, server):
-        self.query_params = {}
+        
         self.api = {
             "method": None,
             "service": None,
@@ -75,16 +75,9 @@ class RequestHandler(AccessManagerRequestHandler) :
         self.api["method"] = self.command
         splitted_path = [url_decode(p) for p in parts[0].strip("/").split("/", 1)]
         self.api["service"] = splitted_path[0] if len(splitted_path) > 0 and len(splitted_path[0]) > 0 else "home"
-        self.api["section"] = splitted_path[1] if len(splitted_path) > 1 else None
+        self.api["section"] = splitted_path[1] if len(splitted_path) > 1 else None        
+        self.query_string = parts[1] if len(parts) > 1 else ""  # hash=1a2d==&p=50/50&q=who?&&x=10&y=20&x=30&json
         
-        query_string = parts[1] if len(parts) > 1 else ""  # hash=1a2d==&p=50/50&q=who?&&x=10&y=20&x=30&json
-        # розібрати параметри запиту, очікуваний рез-т: {"hash": "1a2d==", "p": "50/50", "q":"who?", x: [10, 30], y: 20, json: None}
-        for key, value in ( map(url_decode, (item.split('=', 1) if '=' in item else [item, None])) 
-            for item in query_string.split('&') if len(item) > 0 ) :
-                self.query_params[key] = value if not key in self.query_params  else  [
-                    *(self.query_params[key] if isinstance(self.query_params[key], (list, tuple)) else [self.query_params[key]]), 
-                    value
-                ]
                 
         # маршрутизація контролерів
         module_name = self.api["service"].lower() + '_controller'     # назва файлу контролера без розширення (home_controller)

@@ -7,7 +7,7 @@ class HomeController(ControllerRest) :
     def do_GET(self) :        
         self.html = f"""<h1>HTTP</h1>
         <img src="/img/Python.png" alt="logo" width=150 />
-        {self.handler.query_params}
+        {self.query_params}
         <hr/>
         <button onclick="onClick('LINK')">LINK</button>
         <button onclick="onClick('POST')">POST</button>
@@ -19,6 +19,8 @@ class HomeController(ControllerRest) :
         <button onclick="onClick('GET', 'noinit')">GET no constructor</button>
         <button onclick="onClick('GET', 'noserve')">GET no serve method</button>
         <button onclick="onClick('GET', 'exserve')">GET exc in serve</button>
+        <br/>
+        <button onclick="onClick('GET', 'product')">GET product</button>
         <p id=out></p>
         <script>
             function onClick(method, service='') {{
