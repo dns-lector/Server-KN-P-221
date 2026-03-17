@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}" />
+    <link rel="icon" href="{% static 'img/Python.png' %}" />
+    <title>{% block title %}Default{% endblock %} - Project 221</title>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">Project 221</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="/"><i class="bi bi-house header-icon"></i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="/privacy"><i class="bi bi-shield-check header-icon"></i></a>
+                        </li>
+                    </ul>
+                    <div>
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-outline-success me-2"
+                            data-bs-toggle="modal" data-bs-target="#authModal">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                        </button>
+
+                        <a href="/signup" 
+                            title="Реєстрація нового користувача"
+                            class="btn btn-outline-secondary"><i class="bi bi-person-add"></i></a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container flex-1">
+        <main role="main" class="pb-3">
+           {% block render_body %}{% endblock %}
+        </main>
+    </div>
+    
+    <footer class="border-top footer text-muted py-3">
+        <div class="container">
+            &copy; 2026 - Project 221 - <a href="/privacy">Privacy</a>
+        </div>
+    </footer>
+
+    
+
+    <!-- Auth Modal -->
+    <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="authModalLabel">Автентифікація</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" id="auth-form">
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="user-login-addon"><i class="bi bi-key"></i></span>
+                            <input type="text" class="form-control" name="user-login"
+                                   placeholder="Login" aria-label="Login" aria-describedby="user-login-addon" />
+                        </div>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="user-password-addon"><i class="bi bi-lock"></i></span>
+                            <input type="text" class="form-control" name="user-password"
+                                   placeholder="Password" aria-label="Password" aria-describedby="user-password-addon" />
+                        </div>                       
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button form="auth-form" type="submit" class="btn btn-primary">Вхід</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script src="{% static 'js/site.js' %}"></script>
+</body>
+</html>
