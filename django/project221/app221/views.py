@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.template import loader
+from .forms.demo_form import DemoForm
 
 # Create your views here.
 def hello(request):
@@ -12,7 +13,17 @@ def index(request):
         'x': 10,              # автоматично перетворюється на змінні
         'str': 'The String'   # які можна підставляти виразами {{x}}, {{str}}
     }                         # 
-    return HttpResponse( template.render(context, request) )
+    return HttpResponse( template.render(context) )
+
+
+def forms(request):
+    context = {            
+        'get': str(request.GET),
+        'x': request.GET.get('x', None),  # доступ до query-параметрів
+        'demo_form': DemoForm() if request.method == 'GET' else DemoForm(request.POST),
+    }                      
+    return render(request, "forms.html", context)
+
 
 '''
 Д.З. Реалізувати окрему сторінку Intro
