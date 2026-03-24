@@ -19,7 +19,56 @@
     <p>
         Повний GET: {{get}}, відокремлений x = {{x}}
     </p>
+<hr/>
+    <h2>Стилізація форм</h2>
+    <form method="post" class="border m-3 p-2">
+        <div class="input-group mb-3">
+            <label class="input-group-text" 
+                for="{{ demo_form.first_name.id_for_label }}"
+                id="{{ demo_form.first_name.id_for_label }}-addon"><i class="bi bi-person-square"></i></label>
 
+            <input type="text" class="form-control {{ demo_form.first_name.errors | yesno:'is-invalid, , '}}" 
+                placeholder="{{ demo_form.first_name.label }}" 
+                name="{{ demo_form.first_name.html_name }}"
+                id="{{ demo_form.first_name.id_for_label }}"
+                value="{{ demo_form.first_name.value | default_if_none:'' }}"
+                aria-label="{{ demo_form.first_name.label }}" 
+                aria-describedby="{{ demo_form.first_name.id_for_label }}-addon">
+
+            {% if 'first_name' in demo_form.errors %}
+            <div class="invalid-feedback">
+                {{ demo_form.first_name.errors.as_text }}
+            </div>
+            {% endif %}
+
+        </div>
+
+         <div class="input-group mb-3">
+            <label class="input-group-text" 
+                for="{{ demo_form.last_name.id_for_label }}"
+                id="{{ demo_form.last_name.id_for_label }}-addon"><i class="bi bi-person-vcard"></i></label>
+
+            <input type="text" class="form-control {{ demo_form.last_name.errors | yesno:'is-invalid, , '}}" 
+                placeholder="{{ demo_form.last_name.label }}" 
+                name="{{ demo_form.last_name.html_name }}"
+                id="{{ demo_form.last_name.id_for_label }}"
+                value="{{ demo_form.last_name.value | default_if_none:'' }}"
+                aria-label="{{ demo_form.last_name.label }}" 
+                aria-describedby="{{ demo_form.last_name.id_for_label }}-addon">
+
+            {% if 'last_name' in demo_form.errors %}
+            <div class="invalid-feedback">
+                {{ demo_form.last_name.errors.as_text }}
+            </div>
+            {% endif %}
+            
+        </div>
+
+        
+        {% csrf_token %}
+        <input type="submit" value="Send" />
+    </form>
+<hr/>
     <p>
         Форми - задаються спеціальними класами (нащадками Form)
         з декларативним описом структури полів. Конструктор класа 
@@ -63,6 +112,7 @@
         <input type="submit" value="Send" />
     </form>
     {{ demo_form.errors }}
+
 {% endblock %}
 
 Д.З. Сворити форму Django з різноманітними типами полів 
