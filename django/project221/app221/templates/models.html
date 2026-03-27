@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Models{% endblock %}
+
+{% block render_body %}
+<h1 class="display-5">Моделі. Взаємодія з БД</h1>
+<p>
+    Моделі (з процесу моделювання) - редуковані представлення реальних об'єктів
+    із залишком лише необхідних для проєкту характеристик. <br/>
+    Модель (з MVC-like патернів) - частина архітектури проєкту, яка відповідає 
+    за взаємодію з постачальниками даних. Зазвичай, у вигляді об'єктів-моделей. 
+    <br/>
+    У Django моделі - класи, що описують дані, які передаються до БД. 
+</p>
+<ul>
+    <li>
+        Моделі оголошуються у файлі <code>models.py</code>, що 
+        є частиною базового проєкту
+    </li>
+    <li>
+        Після оголошення моделей необхідно створити міграцію
+        (якщо сервер запущений, то його краще зупинити)<br/>
+        <code>python manage.py makemigrations app221</code><br/>
+        <i>Migrations for 'app221':<br/>
+            app221\migrations\0001_initial.py<br/>
+                + Create model Client</i>
+    </li>
+    <li>
+        Виконуємо створену міграцію <br/>
+        <code>python manage.py migrate</code><br/>
+        <i>Running migrations:<br/>
+            Applying app221.0001_initial... OK</i>
+    </li>
+</ul>
+<p>
+    Панель адміністратора також входить до базового проєкту 
+    і дозволяє взаємодіяти з БД.
+</p>
+<ul>
+    <li>
+        Створюємо користувача-адміністратора (супер-користувача)<br/>
+        <code>python manage.py createsuperuser</code><br/>
+        <i>Superuser created successfully</i>
+    </li>
+    <li>
+        Запускаємо сервер, якщо це не зроблено раніше,
+        переходимо за адресою <a href="/admin/">/admin</a>
+    </li>
+    <li>
+        Моделі, навіть після міграції, не потрапляють 
+        автоматично до панелі адміністратора. Для включення 
+        їх необхідно зареєструвати у файлі <code>admin.py</code> 
+        (є частиною базового проєкту)<br/>
+        <code>admin.site.register(Client)</code><br/>
+        Оновлюємо сайт-адмінку, створюємо через нього нового клієнта,
+        переконуємось у його відображенні<br/>
+        <img src="{% static '/img/admin1.jpg' %}" alt="admin1"/>
+    </li>
+    <li>
+        Для покращення відображення створємо адмін-модель та 
+        реєструємо її співвідношення з моделлю даних
+        у файлі <code>admin.py</code><br/>
+        <code>class ClientAdmin(admin.ModelAdmin) :<br/>
+        &emsp;    list_display = ('id', 'last_name', 'first_name', 'register_at')<br/>
+        <br/>
+        admin.site.register(Client, ClientAdmin) </code><br/>
+        Оновлюємо сторінку та спостерігаємо зміну відображення:
+        <img src="{% static '/img/admin2.jpg' %}" alt="admin2"/>
+    </li>
+</ul>
+{% endblock %}

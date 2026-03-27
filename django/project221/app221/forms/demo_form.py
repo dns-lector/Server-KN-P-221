@@ -4,14 +4,14 @@ from django.core.exceptions import ValidationError
 class DemoForm(forms.Form) :
     first_name = forms.CharField(
         min_length=2, 
-        max_length=5, 
+        max_length=64, 
         label="First name",
         error_messages={
             'required': "Ім'я необхідно зазначити",
             'min_length': "Ім'я закоротке (мін. 2 символи)",
             'max_length': "Ім'я задовге (макс. 5 символів)",
         })
-    last_name = forms.CharField(min_length=2, max_length=5, label="Last name" )
+    last_name = forms.CharField(min_length=2, max_length=64, label="Last name" )
 
     def clean(self):   # метод, що відповідає за валідацію форми
         cleaned_data = super().clean()  # запуск оброблення за замовчанням
@@ -21,6 +21,8 @@ class DemoForm(forms.Form) :
             # перевіряємо, що і'мя починається з великої літери
             if not first_name[0].isupper() :
                 self.add_error('first_name', ValidationError("І'мя має починатися з великої літери"))
+        self.cleaned_data = cleaned_data
+        return cleaned_data       
 
     
 '''

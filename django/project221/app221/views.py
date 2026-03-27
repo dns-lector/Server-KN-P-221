@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.template import loader
 from .forms.demo_form import DemoForm
+from .models import Client
+import datetime
 
 # Create your views here.
 def hello(request):
@@ -17,19 +19,32 @@ def index(request):
 
 
 def forms(request):
+    form =  DemoForm() if request.method == 'GET' else DemoForm(request.POST)
     context = {            
         'get': str(request.GET),
         'x': request.GET.get('x', None),  # доступ до query-параметрів
-        'demo_form': DemoForm() if request.method == 'GET' else DemoForm(request.POST),
-    }                      
+        'demo_form': form,
+    }
+    if request.method == 'POST' :
+        if form.is_valid() :
+            client = Client()
+            client.first_name = form.cleaned_data['first_name']
+            client.last_name = form.cleaned_data['last_name']
+            client.register_at = datetime.datetime.now()
+            client.save()
     return render(request, "forms.html", context)
 
 
+def models(request):
+    context = { 
+        
+    }                      
+    return render(request, "models.html", context)
+
+
 '''
-Д.З. Реалізувати окрему сторінку Intro
-На ній вивести дані про встановлення та налаштування фреймворка Django
-А також вивести дані про час завантаження сторіки:
- Сторінка завантажена о 14:43 13.03.2026
-На головній сторінці розмістит посилання на неї
+Д.З. Реалізувати на сторінці форм
+виведення повідомлення про успішну реєстрацію
+нового користувача.
 Додати скріншоти 
 '''
